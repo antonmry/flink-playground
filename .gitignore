@@ -1,0 +1,12 @@
+flink-1.12.0/
+.idea/
+.project
+.settings
+*.iml
+target/
+.classpath
+.factorypath
+dependency-reduced-pom.xml
+result.out
+results/
+
