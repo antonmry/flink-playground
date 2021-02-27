@@ -18,14 +18,10 @@
 
 package galiglobal.flink.eventTime;
 
-import galiglobal.flink.IncrementMapFunction;
-import galiglobal.flink.RandomLongSource;
 import org.apache.flink.api.common.eventtime.*;
-import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ConfigurationUtils;
-import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.PrintSinkFunction;
@@ -37,14 +33,14 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Properties;
 
-public class StreamingJob {
+public class InternalStreamingJob {
 
-    private static final Logger LOG = LoggerFactory.getLogger(StreamingJob.class);
+    private static final Logger LOG = LoggerFactory.getLogger(InternalStreamingJob.class);
 
     private SourceFunction<SensorData> source;
     private SinkFunction<SensorData> sink;
 
-    public StreamingJob(SourceFunction<SensorData> source, SinkFunction<SensorData> sink) {
+    public InternalStreamingJob(SourceFunction<SensorData> source, SinkFunction<SensorData> sink) {
         this.source = source;
         this.sink = sink;
     }
@@ -61,7 +57,7 @@ public class StreamingJob {
         //env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
         //env.enableCheckpointing(100);  // defaults to exactly-once
-        env.setParallelism(1);  // parallelism can be set per operator, and for the job as a whole
+        env.setParallelism(2);  // parallelism can be set per operator, and for the job as a whole
 
         LOG.debug("Start Flink example job");
 
@@ -89,6 +85,7 @@ public class StreamingJob {
                 );
 
         sensorEventTimeStream
+            .transform("test", sensorEventTimeStream.getType(), new StreamFilter<>())
             .keyBy((event) -> event.getId())
             .process(new TimeoutFunction())
             .addSink(sink);
@@ -99,7 +96,7 @@ public class StreamingJob {
     }
 
     public static void main(String[] args) throws Exception {
-        StreamingJob job = new StreamingJob(new RandomSensorSource(), new PrintSinkFunction<>());
+        InternalStreamingJob job = new InternalStreamingJob(new RandomSensorSource(), new PrintSinkFunction<>());
         job.execute();
     }
 

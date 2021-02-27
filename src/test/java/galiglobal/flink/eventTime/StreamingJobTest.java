@@ -30,12 +30,52 @@ public class StreamingJobTest {
                 .build());
 
     @Test
+    public void test_Fail_Pipeline() throws Exception {
+
+        var source = new ParallelCollectionSource(
+            Arrays.asList(
+                new SensorData("sensor0", 0L, 0.1),
+                new SensorData("sensor1", 0L, 0.2),
+                new SensorData("sensor0", 100L, 0.3),
+                new SensorData("sensor1", 100L, 0.4),
+                new SensorData("sensor0", 200L, 0.5),
+                //new SensorData("sensor1", 200L, 0.6),
+                new SensorData("sensor0", 300L, 0.7),
+                new SensorData("sensor1", 300L, 0.8),
+                new SensorData("sensor0", 400L, 0.9),
+                new SensorData("sensor1", 400L, 1.0)
+            )
+        );
+
+        var sink = new SinkCollectingSensorData();
+        var job = new InternalFailStreamingJob(source, sink);
+
+        job.execute();
+
+        sink.result.stream().forEach(s -> System.out.println(s));
+        // assertThat(sink.result).containsExactlyInAnyOrder(2L, 11L, -9L);
+    }
+
+    @Test
     public void testCompletePipeline() throws Exception {
 
-        ParallelSourceFunction<SensorData> source =
-            new ParallelCollectionSource(Arrays.asList(new SensorData("sensor0", 0L, 0.1)));
-        SinkCollectingSensorData sink = new SinkCollectingSensorData();
-        StreamingJob job = new StreamingJob(source, sink);
+        var source = new ParallelCollectionSource(
+            Arrays.asList(
+                new SensorData("sensor0", 0L, 0.1),
+                new SensorData("sensor1", 0L, 0.2),
+                new SensorData("sensor0", 100L, 0.3),
+                new SensorData("sensor1", 100L, 0.4),
+                new SensorData("sensor0", 200L, 0.5),
+                //new SensorData("sensor1", 200L, 0.6),
+                new SensorData("sensor0", 300L, 0.7),
+                new SensorData("sensor1", 300L, 0.8),
+                new SensorData("sensor0", 400L, 0.9),
+                new SensorData("sensor1", 400L, 1.0)
+            )
+        );
+
+        var sink = new SinkCollectingSensorData();
+        var job = new InternalStreamingJob(source, sink);
 
         job.execute();
 

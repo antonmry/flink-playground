@@ -18,14 +18,10 @@
 
 package galiglobal.flink.eventTime;
 
-import galiglobal.flink.IncrementMapFunction;
-import galiglobal.flink.RandomLongSource;
-import org.apache.flink.api.common.eventtime.*;
-import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ConfigurationUtils;
-import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.PrintSinkFunction;
@@ -37,14 +33,14 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Properties;
 
-public class StreamingJob {
+public class InternalFailStreamingJob {
 
-    private static final Logger LOG = LoggerFactory.getLogger(StreamingJob.class);
+    private static final Logger LOG = LoggerFactory.getLogger(InternalFailStreamingJob.class);
 
     private SourceFunction<SensorData> source;
     private SinkFunction<SensorData> sink;
 
-    public StreamingJob(SourceFunction<SensorData> source, SinkFunction<SensorData> sink) {
+    public InternalFailStreamingJob(SourceFunction<SensorData> source, SinkFunction<SensorData> sink) {
         this.source = source;
         this.sink = sink;
     }
@@ -54,7 +50,7 @@ public class StreamingJob {
         Properties props = new Properties();
         props.put("metrics.reporter.jmx.factory.class", "org.apache.flink.metrics.jmx.JMXReporterFactory");
         Configuration conf = ConfigurationUtils.createConfiguration(props);
-        // StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
+//        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         // https://issues.apache.org/jira/browse/FLINK-19317
@@ -71,24 +67,10 @@ public class StreamingJob {
 
 
         var sensorEventTimeStream =
-            sensorStream
-                .assignTimestampsAndWatermarks(
-                    new WatermarkStrategy<SensorData>() {
-                        @Override
-                        public WatermarkGenerator<SensorData> createWatermarkGenerator(WatermarkGeneratorSupplier.Context context) {
-                            return new BoundedOutOfOrdernessWatermarks<SensorData>(Duration.ofMillis(0)) {
-                                @Override
-                                public void onEvent(SensorData event, long eventTimestamp, WatermarkOutput output) {
-                                    super.onEvent(event, eventTimestamp, output);
-                                    super.onPeriodicEmit(output);
-                                }
-                            };
-                        }
-                    }
-                        .withTimestampAssigner((event, timestamp) -> event.getTimestamp())
-                );
+            sensorStream.assignTimestampsAndWatermarks(WatermarkStrategy.<SensorData>forBoundedOutOfOrderness(Duration.ofMillis(200)).withTimestampAssigner((event, timestamp) -> event.getTimestamp()));
 
         sensorEventTimeStream
+            .transform("test", sensorEventTimeStream.getType(), new StreamFilter<>())
             .keyBy((event) -> event.getId())
             .process(new TimeoutFunction())
             .addSink(sink);
@@ -99,7 +81,7 @@ public class StreamingJob {
     }
 
     public static void main(String[] args) throws Exception {
-        StreamingJob job = new StreamingJob(new RandomSensorSource(), new PrintSinkFunction<>());
+        InternalFailStreamingJob job = new InternalFailStreamingJob(new RandomSensorSource(), new PrintSinkFunction<>());
         job.execute();
     }
 
