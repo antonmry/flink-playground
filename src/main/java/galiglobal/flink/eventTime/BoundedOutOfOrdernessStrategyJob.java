@@ -1,21 +1,3 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package galiglobal.flink.eventTime;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
@@ -33,14 +15,14 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Properties;
 
-public class InternalFailStreamingJob {
+public class BoundedOutOfOrdernessStrategyJob {
 
-    private static final Logger LOG = LoggerFactory.getLogger(InternalFailStreamingJob.class);
+    private static final Logger LOG = LoggerFactory.getLogger(BoundedOutOfOrdernessStrategyJob.class);
 
     private SourceFunction<SensorData> source;
     private SinkFunction<SensorData> sink;
 
-    public InternalFailStreamingJob(SourceFunction<SensorData> source, SinkFunction<SensorData> sink) {
+    public BoundedOutOfOrdernessStrategyJob(SourceFunction<SensorData> source, SinkFunction<SensorData> sink) {
         this.source = source;
         this.sink = sink;
     }
@@ -55,9 +37,8 @@ public class InternalFailStreamingJob {
 
         // https://issues.apache.org/jira/browse/FLINK-19317
         //env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-
-        //env.enableCheckpointing(100);  // defaults to exactly-once
-        env.setParallelism(1);  // parallelism can be set per operator, and for the job as a whole
+        env.setParallelism(1);
+        env.getConfig().setAutoWatermarkInterval(Duration.ofMillis(100).toMillis());
 
         LOG.debug("Start Flink example job");
 
@@ -65,23 +46,27 @@ public class InternalFailStreamingJob {
             env.addSource(source)
                 .returns(TypeInformation.of(SensorData.class));
 
-
         var sensorEventTimeStream =
-            sensorStream.assignTimestampsAndWatermarks(WatermarkStrategy.<SensorData>forBoundedOutOfOrderness(Duration.ofMillis(200)).withTimestampAssigner((event, timestamp) -> event.getTimestamp()));
+            sensorStream.assignTimestampsAndWatermarks(
+                WatermarkStrategy.<SensorData>forBoundedOutOfOrderness(
+                    Duration.ofMillis(100)
+                ).withTimestampAssigner(
+                    (event, timestamp) -> event.getTimestamp()
+                )
+            );
 
         sensorEventTimeStream
-            .transform("test", sensorEventTimeStream.getType(), new StreamFilter<>())
+            .transform("debugFilter", sensorEventTimeStream.getType(), new StreamWatermarkDebugFilter<>())
             .keyBy((event) -> event.getId())
             .process(new TimeoutFunction())
             .addSink(sink);
 
         LOG.debug("Stop Flink example job");
-
         env.execute();
     }
 
     public static void main(String[] args) throws Exception {
-        InternalFailStreamingJob job = new InternalFailStreamingJob(new RandomSensorSource(), new PrintSinkFunction<>());
+        BoundedOutOfOrdernessStrategyJob job = new BoundedOutOfOrdernessStrategyJob(new RandomSensorSource(), new PrintSinkFunction<>());
         job.execute();
     }
 

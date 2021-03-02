@@ -6,12 +6,12 @@ import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
-public class StreamFilter<IN> extends AbstractUdfStreamOperator<IN, FilterFunction<IN>>
+public class StreamWatermarkDebugFilter<IN> extends AbstractUdfStreamOperator<IN, FilterFunction<IN>>
     implements OneInputStreamOperator<IN, IN> {
 
     private static final long serialVersionUID = 4243621562124742653L;
 
-    public StreamFilter() {
+    public StreamWatermarkDebugFilter() {
         super((FilterFunction<IN>) in -> true);
     }
 

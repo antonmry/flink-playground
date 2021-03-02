@@ -14,9 +14,6 @@ public class TimeoutFunction
     static final long TIMEOUT_MS = 100;
     private static final Logger LOG = LoggerFactory.getLogger(TimeoutFunction.class);
 
-    /**
-     * The state that is maintained by this process function
-     */
     private ValueState<SensorDataState> state;
 
     @Override
@@ -37,13 +34,7 @@ public class TimeoutFunction
 
         // Cancel previous timer
         if (processState.getTimerSetFor() != 0) {
-
-            //if (true)
-            // !!! If the previous timeout is still in the future (i.e. didn't timeout), then cancel it [this shouldn't matter, because the timer should already have fired. But if we process timers late, then this will stop them ever firing]
-           // if (processState.getPrevMsg().getTimestamp() + TIMEOUT_MS <= in.getTimestamp()) {
-            if (true) {
                 ctx.timerService().deleteEventTimeTimer(processState.getTimerSetFor());
-            }
         }
 
         // Schedule a timeout

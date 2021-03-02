@@ -33,14 +33,14 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Properties;
 
-public class InternalStreamingJob {
+public class CustomStrategyJob {
 
-    private static final Logger LOG = LoggerFactory.getLogger(InternalStreamingJob.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CustomStrategyJob.class);
 
     private SourceFunction<SensorData> source;
     private SinkFunction<SensorData> sink;
 
-    public InternalStreamingJob(SourceFunction<SensorData> source, SinkFunction<SensorData> sink) {
+    public CustomStrategyJob(SourceFunction<SensorData> source, SinkFunction<SensorData> sink) {
         this.source = source;
         this.sink = sink;
     }
@@ -55,9 +55,7 @@ public class InternalStreamingJob {
 
         // https://issues.apache.org/jira/browse/FLINK-19317
         //env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-
-        //env.enableCheckpointing(100);  // defaults to exactly-once
-        env.setParallelism(2);  // parallelism can be set per operator, and for the job as a whole
+        env.setParallelism(1);
 
         LOG.debug("Start Flink example job");
 
@@ -71,10 +69,16 @@ public class InternalStreamingJob {
                 .assignTimestampsAndWatermarks(
                     new WatermarkStrategy<SensorData>() {
                         @Override
-                        public WatermarkGenerator<SensorData> createWatermarkGenerator(WatermarkGeneratorSupplier.Context context) {
-                            return new BoundedOutOfOrdernessWatermarks<SensorData>(Duration.ofMillis(0)) {
+                        public WatermarkGenerator<SensorData> createWatermarkGenerator(
+                            WatermarkGeneratorSupplier.Context context) {
+                            return new BoundedOutOfOrdernessWatermarks<>(
+                                Duration.ofMillis(0)
+                            ) {
                                 @Override
-                                public void onEvent(SensorData event, long eventTimestamp, WatermarkOutput output) {
+                                public void onEvent(
+                                    SensorData event,
+                                    long eventTimestamp,
+                                    WatermarkOutput output) {
                                     super.onEvent(event, eventTimestamp, output);
                                     super.onPeriodicEmit(output);
                                 }
@@ -85,18 +89,17 @@ public class InternalStreamingJob {
                 );
 
         sensorEventTimeStream
-            .transform("test", sensorEventTimeStream.getType(), new StreamFilter<>())
+            .transform("debugFilter", sensorEventTimeStream.getType(), new StreamWatermarkDebugFilter<>())
             .keyBy((event) -> event.getId())
             .process(new TimeoutFunction())
             .addSink(sink);
 
         LOG.debug("Stop Flink example job");
-
         env.execute();
     }
 
     public static void main(String[] args) throws Exception {
-        InternalStreamingJob job = new InternalStreamingJob(new RandomSensorSource(), new PrintSinkFunction<>());
+        CustomStrategyJob job = new CustomStrategyJob(new RandomSensorSource(), new PrintSinkFunction<>());
         job.execute();
     }
 
