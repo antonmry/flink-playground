@@ -6,23 +6,20 @@ plugins {
 }
 
 ext {
-  javaVersion = '1.8'
-    flinkVersion = '1.17.1'
-    scalaBinaryVersion = '2.12'
-    slf4jVersion = '1.7.36'
-    log4jVersion = '2.17.1'
-    flinkVersionNew = flinkVersion.toString().replace("-SNAPSHOT", "") >= "1.17"
+  javaVersion = '17'
+  flinkVersion = '1.18.1'
+  paimonVersion = '0.8.0'
+  scalaBinaryVersion = '2.12'
+  slf4jVersion = '1.7.36'
+  log4jVersion = '2.17.1'
+  flinkVersionNew = flinkVersion.toString().replace("-SNAPSHOT", "") >= "1.17"
 }
 
 // artifact properties
 group = 'com.galiglobal'
 version = '0.1-SNAPSHOT'
-if (flinkVersionNew) {
-  mainClassName = 'com.galiglobal.DataStreamJob'
-} else {
-  mainClassName = 'com.galiglobal.StreamingJob'
-}
-description = """Flink Quickstart Job"""
+mainClassName = 'com.galiglobal.local.PaimonLocalSourceStreamJob'
+description = """Paimon Playground Jobs"""
 
 sourceCompatibility = javaVersion
 targetCompatibility = javaVersion
@@ -78,25 +75,10 @@ dependencies {
   // connectors. These must be in the flinkShadowJar configuration!
   // --------------------------------------------------------------
 
-  // JDBC
-  flinkShadowJar "org.apache.flink:flink-table-planner_${scalaBinaryVersion}:${flinkVersion}"
-    flinkShadowJar "org.apache.flink:flink-connector-jdbc:3.1.1-1.17"
-    implementation 'org.postgresql:postgresql:42.6.0'
-
-    implementation "com.ververica:flink-connector-postgres-cdc:2.4.2"
-
-    // Paimon
-    flinkShadowJar 'org.apache.paimon:paimon-flink-1.17:0.6-SNAPSHOT'
-    flinkShadowJar "org.apache.flink:flink-hadoop-compatibility_${scalaBinaryVersion}:${flinkVersion}"
-    implementation "org.apache.flink:flink-connector-base:${flinkVersion}"
-    implementation "org.apache.flink:flink-connector-files:${flinkVersion}"
-    implementation group: 'org.apache.flink', name: 'flink-hadoop-compatibility_2.12', version: '1.17.1'
-    implementation 'org.apache.hadoop:hadoop-client:3.3.5'
-    implementation 'org.apache.hadoop:hadoop-common:3.3.5'
-
-    // S3
-    implementation 'org.apache.paimon:paimon-s3:0.6-SNAPSHOT'
-    implementation "org.apache.flink:flink-s3-fs-hadoop:${flinkVersion}"
+  // Paimon
+  flinkShadowJar "org.apache.paimon:paimon-flink-1.18:${paimonVersion}"
+  flinkShadowJar "org.apache.paimon:paimon-bundle:${paimonVersion}"
+  flinkShadowJar "org.apache.paimon:paimon-s3:${paimonVersion}"
 
     // Kafka
     implementation "org.apache.flink:flink-connector-kafka:${flinkVersion}"

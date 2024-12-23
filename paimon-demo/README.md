@@ -31,3 +31,18 @@ kubectl port-forward svc/basic-example-rest 8081 -n ng-flink
 kubectl delete flinkdeployment/basic-example -n ng-flink
 ```
 
+## Execute the Paimon job locally
+
+To run and test your application with an embedded instance of Flink use: 'gradle run'
+
+```bash
+rm -fr /tmp/paimon
+./gradlew run -PmainClass=com.galiglobal.local.PaimonLocalSourceStreamJob
+```
+
+```bash
+./gradlew run -PmainClass=com.galiglobal.local.PaimonLocalSinkStreamJob
+```
+
+To package your job for submission to Flink, use: 'gradle shadowJar'. Afterwards, you'll find the
+jar to use in the 'build/libs' folder.
