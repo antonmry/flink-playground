@@ -77,6 +77,8 @@ dependencies {
   implementation "org.apache.flink:flink-table-planner_2.12:$flinkVersion"
 
   implementation "org.apache.flink:flink-statebackend-rocksdb:$flinkVersion"
+  implementation "org.apache.flink:flink-statebackend-forst:$flinkVersion"
+
 
   // --------------------------------------------------------------
   // Dependencies that should be part of the shadow jar, e.g.

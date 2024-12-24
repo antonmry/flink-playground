@@ -6,7 +6,9 @@ import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.connector.file.table.FileSystemConnectorOptions;
+import org.apache.flink.state.forst.ForStOptions;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 import org.apache.flink.table.api.DataTypes;
@@ -19,6 +21,8 @@ import org.apache.flink.util.Collector;
 
 import java.time.Duration;
 
+import org.apache.flink.state.forst.ForStConfigurableOptions;
+
 public class DataStreamJob {
 
     public static void main(String[] args) throws Exception {
@@ -28,9 +32,14 @@ public class DataStreamJob {
 
             Configuration conf = new Configuration();
             //conf.setString("state.backend.type", "hashmap");
-            conf.set(StateBackendOptions.STATE_BACKEND, "rocksdb");
+            //conf.set(StateBackendOptions.STATE_BACKEND, "rocksdb");
+            conf.set(StateBackendOptions.STATE_BACKEND, "forst");
+            conf.set(ForStOptions.REMOTE_DIRECTORY, "s3://arodriguez-flink-poc/flink/db");
+            conf.set(ForStOptions.REMOTE_DIRECTORY, "s3://arodriguez-flink-poc/flink/db");
+
             conf.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
-            conf.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, "file:///tmp/flink/checkpoint");
+           //conf.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, "file:///tmp/flink/checkpoint");
+           conf.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, "s3://arodriguez-flink-poc/flink/checkpoint");
             conf.set(CheckpointingOptions.CHECKPOINTING_INTERVAL, Duration.ofSeconds(5));
 
             env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(conf);
@@ -60,8 +69,13 @@ public class DataStreamJob {
 
         DataStream<Row> resultStream = tEnv.toDataStream(table);
 
-        resultStream.flatMap(new Splitter())
-            .keyBy(value -> value.f0)
+        KeyedStream<Tuple2<String, Integer>, String> keyedStream = resultStream.flatMap(new Splitter())
+            .keyBy(value -> value.f0);
+
+        // Not available yet in 2.0-preview1
+        // keyedStream.enableAsyncState();
+
+        keyedStream
             .window(TumblingProcessingTimeWindows.of(Duration.ofSeconds(5)))
             .sum(1)
             .print();
@@ -74,7 +88,7 @@ public class DataStreamJob {
         public void flatMap(Row row, Collector<Tuple2<String, Integer>> out) throws Exception {
             String sentence = row.getField("record").toString();
 
-            for (String word: sentence.split(" ")) {
+            for (String word : sentence.split(" ")) {
                 out.collect(new Tuple2<String, Integer>(word, 1));
             }
         }
