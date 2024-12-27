@@ -19,7 +19,8 @@ mainClassName = 'com.galiglobal.DataStreamJob'
 description = """Demo Job for Backend State tests"""
 ext {
   javaVersion = '17'
-  flinkVersion = '2.0-preview1'
+//  flinkVersion = '2.0-preview1'
+  flinkVersion = '2.0-SNAPSHOT'
   scalaBinaryVersion = '_2.12'
   slf4jVersion = '1.7.36'
   log4jVersion = '2.24.1'
